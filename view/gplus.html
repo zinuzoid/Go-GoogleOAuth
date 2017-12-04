@@ -1,0 +1,88 @@
+{{ template "header.html"}}
+<body>
+<div class="container">
+    <h1 class="py-2">{{.Header}}</h1>
+    <form class="my-2">
+        <button id="submit" class="btn btn-primary" type="button" disabled onclick="handleSignIn()">Login with
+            Google!
+        </button>
+    </form>
+    <div id="profile" class="my-3">
+        <img id="profile-img" src=""/>
+        <ul class="list-group my-2">
+            <li class="list-group-item" id="name"></li>
+            <li class="list-group-item" id="email"></li>
+            <li class="list-group-item" id="id"></li>
+            <li class="list-group-item" id="id-token"></li>
+            <li class="list-group-item" id="verify"></li>
+        </ul>
+    </div>
+</div>
+<script src="https://apis.google.com/js/api.js"></script>
+<script type="text/javascript">
+    var GoogleAuth;
+
+    function initClient() {
+        gapi.client.init({
+            'apiKey': 'czS-6moU6yPehzM_9SwynWYi',
+            'clientId': '849390110274-ldnqpsakb7dtbs7i90ber89bmsks8v0e.apps.googleusercontent.com',
+            'scope': 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'
+        }).then(function () {
+            GoogleAuth = gapi.auth2.getAuthInstance();
+            GoogleAuth.isSignedIn.listen(updateSigninStatus);
+            updateSigninStatus(GoogleAuth.isSignedIn.get());
+        }).then(function () {
+            $('#submit').prop('disabled', false);
+        }).catch(function (e) {
+            console.log(e);
+        });
+    }
+
+    function handleSignIn() {
+        if (GoogleAuth.isSignedIn.get()) {
+            GoogleAuth.signOut();
+        } else {
+            GoogleAuth.signIn();
+        }
+    }
+
+    function updateSigninStatus(isSignedIn) {
+        if (isSignedIn) {
+            $('#submit').text('Logout');
+            var user = GoogleAuth.currentUser.get();
+            var basicProfile = user.getBasicProfile();
+            $('#profile').show();
+            $('#profile-img').attr('src', basicProfile.getImageUrl());
+            $('#name').text(basicProfile.getName());
+            $('#email').text(basicProfile.getEmail());
+            $('#id').text(basicProfile.getId());
+            $('#id-token').text(user.getAuthResponse().id_token);
+            verify_token(user.getAuthResponse().id_token, basicProfile.getEmail())
+        } else {
+            $('#profile').hide();
+            $('#email').text('');
+            $('#submit').text('Login with Google!');
+        }
+    }
+
+    function verify_token(token, email) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/login/gplus/verify');
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function() {
+            if(xhr.status === 200) {
+                $('#verify').text('valid');
+            } else {
+                $('#verify').text('not valid');
+            }
+        };
+        xhr.send('token=' + token + '&email=' + email);
+        $('#verify').text('verifying...');
+    }
+
+    gapi.load('client:auth2', initClient);
+
+    $('#profile').hide();
+</script>
+</body>
+{{ template "footer.html"}}
